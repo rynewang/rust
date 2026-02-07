@@ -838,7 +838,13 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
         vector_layout: TyAndLayout<'tcx>,
         alignment: SimdAlign,
     ) -> InterpResult<'tcx> {
-        assert_matches!(vector_layout.backend_repr, BackendRepr::SimdVector { .. });
+        // SIMD types can use either SimdVector (for power-of-two element counts)
+        // or Memory (for non-power-of-two element counts like Simd<_, 3>).
+        assert!(vector_layout.ty.is_simd(), "check_simd_ptr_alignment called on non-SIMD type");
+        assert_matches!(
+            vector_layout.backend_repr,
+            BackendRepr::SimdVector { .. } | BackendRepr::Memory { sized: true }
+        );
 
         let align = match alignment {
             ty::SimdAlign::Unaligned => {
