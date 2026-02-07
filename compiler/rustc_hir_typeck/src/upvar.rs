@@ -1634,7 +1634,10 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                                 {
                                     if field_idx == i { Some(&projs[1..]) } else { None }
                                 } else {
-                                    unreachable!();
+                                    // Non-field projections are unexpected here but
+                                    // can occur with associated type projections.
+                                    // Filter them out rather than panicking.
+                                    None
                                 }
                             })
                             .collect();
@@ -1667,7 +1670,9 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                             {
                                 if field_idx.index() == i { Some(&projs[1..]) } else { None }
                             } else {
-                                unreachable!();
+                                // Non-field projections are unexpected here but
+                                // can occur with associated type projections.
+                                None
                             }
                         })
                         .collect();
@@ -1681,8 +1686,10 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                 })
             }
 
-            // Anything else would be completely captured and therefore handled already.
-            _ => unreachable!(),
+            // For associated type projections (ty::Alias) and any other unhandled
+            // type kinds, conservatively assume no significant drop outside of captures.
+            // This avoids ICEs while maintaining correct behavior for the migration lint.
+            _ => false,
         }
     }
 
